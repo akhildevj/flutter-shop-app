@@ -12,6 +12,9 @@ class ProductsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = Provider.of<Products>(context);
     final products = showFavorites ? provider.favoriteItems : provider.items;
+    if (products.isEmpty) {
+      return const Center(child: Text('No products to display'));
+    }
 
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
