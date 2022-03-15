@@ -78,16 +78,31 @@ class _OrderButtonState extends State<OrderButton> {
 
   @override
   Widget build(BuildContext context) {
+    final scaffold = ScaffoldMessenger.of(context);
+
     return TextButton(
         onPressed: (widget.cart.totalAmount <= 0 || _isLoading)
             ? null
             : () async {
                 setState(() => _isLoading = true);
-                await Provider.of<Orders>(context, listen: false).addOrder(
-                    widget.cart.items.values.toList(), widget.cart.totalAmount);
+                try {
+                  await Provider.of<Orders>(context, listen: false).addOrder(
+                      widget.cart.items.values.toList(),
+                      widget.cart.totalAmount);
 
+                  widget.cart.clear();
+                } catch (error) {
+                  scaffold.hideCurrentSnackBar();
+                  scaffold.showSnackBar(SnackBar(
+                    content: Text(
+                      error.toString(),
+                      textAlign: TextAlign.center,
+                    ),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: Colors.red,
+                  ));
+                }
                 setState(() => _isLoading = false);
-                widget.cart.clear();
               },
         child: _isLoading
             ? const CircularProgressIndicator()

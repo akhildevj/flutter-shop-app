@@ -55,25 +55,24 @@ class _EditProductScreenState extends State<EditProductScreen> {
     if (!isValid) return;
     _form.currentState?.save();
     setState(() => _isLoading = true);
-
-    if (_editedProduct.id.isNotEmpty) {
-      await Provider.of<Products>(context, listen: false)
-          .updateProduct(_editedProduct.id, _editedProduct);
-    } else {
-      try {
+    try {
+      if (_editedProduct.id.isNotEmpty) {
+        await Provider.of<Products>(context, listen: false)
+            .updateProduct(_editedProduct.id, _editedProduct);
+      } else {
         await Provider.of<Products>(context, listen: false)
             .addProduct(_editedProduct);
-      } catch (error) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-            'Adding product failed',
-            textAlign: TextAlign.center,
-          ),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.red,
-        ));
       }
+    } catch (error) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          error.toString(),
+          textAlign: TextAlign.center,
+        ),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.red,
+      ));
     }
     setState(() => _isLoading = false);
     Navigator.pop(context);

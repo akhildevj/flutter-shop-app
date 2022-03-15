@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shop_app/models/http_exception.dart';
 import 'package:shop_app/providers/product.dart';
 
+const webUrl = 'akzshops-default-rtdb.asia-southeast1.firebasedatabase.app';
+
 class Products with ChangeNotifier {
   List<Product> _items = [];
 
@@ -22,9 +24,7 @@ class Products with ChangeNotifier {
 
   Future<void> fetchProducts() async {
     try {
-      final url = Uri.https(
-          "akzshops-default-rtdb.asia-southeast1.firebasedatabase.app",
-          "/products.json");
+      final url = Uri.https(webUrl, "/products.json");
 
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -43,15 +43,13 @@ class Products with ChangeNotifier {
         _items = products;
       }
     } catch (err) {
-      return Future.error('Products: An error occured!');
+      return Future.error('An error occured!');
     }
   }
 
   Future<void> addProduct(Product product) async {
     try {
-      final url = Uri.https(
-          "akzshops-default-rtdb.asia-southeast1.firebasedatabase.app",
-          "/products.json");
+      final url = Uri.https(webUrl, "/products.json");
 
       final body = json.encode({
         'title': product.title,
@@ -73,36 +71,40 @@ class Products with ChangeNotifier {
       _items.add(newProduct);
       notifyListeners();
     } catch (error) {
-      rethrow;
+      throw HttpException("Adding product failed!");
     }
   }
 
   Future<void> updateProduct(String id, Product product) async {
-    final index = _items.indexWhere((item) => item.id == id);
-    if (index >= 0) {
-      final url = Uri.https(
-          "akzshops-default-rtdb.asia-southeast1.firebasedatabase.app",
-          '/products/$id.json');
+    try {
+      final index = _items.indexWhere((item) => item.id == id);
+      if (index >= 0) {
+        final url = Uri.https(webUrl, '/products/$id.json');
 
-      final body = json.encode({
-        'title': product.title,
-        'description': product.description,
-        'price': product.price,
-        'imageUrl': product.imageUrl
-      });
+        final body = json.encode({
+          'title': product.title,
+          'description': product.description,
+          'price': product.price,
+          'imageUrl': product.imageUrl
+        });
 
-      await http.patch(url, body: body);
+        final response = await http.patch(url, body: body);
 
-      _items[index] = product;
-      notifyListeners();
+        if (response.statusCode >= 400) {
+          throw HttpException("Updating product failed!");
+        }
+
+        _items[index] = product;
+        notifyListeners();
+      }
+    } catch (error) {
+      rethrow;
     }
   }
 
   Future<void> deleteProduct(String id) async {
     try {
-      final url = Uri.https(
-          "akzshops-default-rtdb.asia-southeast1.firebasedatabase.app",
-          '/products/$id.json');
+      final url = Uri.https(webUrl, '/products/$id.json');
 
       final index = _items.indexWhere((item) => item.id == id);
       Product? product = _items[index];
@@ -114,7 +116,7 @@ class Products with ChangeNotifier {
       if (response.statusCode >= 400) {
         _items.insert(index, product);
         notifyListeners();
-        throw HttpException("Could not delete product");
+        throw HttpException("Deleting product failed.");
       }
       product = null;
     } catch (error) {

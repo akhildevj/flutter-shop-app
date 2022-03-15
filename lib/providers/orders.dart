@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
+import 'package:shop_app/models/http_exception.dart';
 import 'package:shop_app/providers/cart.dart';
+
+const webUrl = 'akzshops-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 class OrderItem {
   final String id;
@@ -25,9 +28,7 @@ class Orders with ChangeNotifier {
 
   Future<void> fetchOrders() async {
     try {
-      final url = Uri.https(
-          "akzshops-default-rtdb.asia-southeast1.firebasedatabase.appzxzc",
-          "/orders.json");
+      final url = Uri.https(webUrl, "/orders.json");
 
       final response = await http.get(url);
       final Map<String, dynamic>? data = json.decode(response.body);
@@ -50,7 +51,7 @@ class Orders with ChangeNotifier {
       _orders = orders.reversed.toList();
       notifyListeners();
     } catch (error) {
-      return Future.error('Orders: An error occured!');
+      return Future.error('An error occured!');
     }
   }
 
@@ -58,9 +59,7 @@ class Orders with ChangeNotifier {
     final timestamp = DateTime.now();
 
     try {
-      final url = Uri.https(
-          "akzshops-default-rtdb.asia-southeast1.firebasedatabase.app",
-          "/orders.json");
+      final url = Uri.https(webUrl, "/orders.json");
 
       final body = json.encode({
         'amount': total,
@@ -86,7 +85,7 @@ class Orders with ChangeNotifier {
       _orders.insert(0, orderItem);
       notifyListeners();
     } catch (error) {
-      rethrow;
+      throw HttpException("Your order could not be submitted!");
     }
   }
 }
