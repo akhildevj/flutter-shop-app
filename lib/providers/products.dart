@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:shop_app/models/http_exception.dart';
@@ -8,7 +7,11 @@ import 'package:shop_app/providers/product.dart';
 const webUrl = 'akzshops-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 class Products with ChangeNotifier {
+  final String? token;
+  final String? userId;
   List<Product> _items = [];
+
+  Products(this.token, this.userId, this._items);
 
   List<Product> get items {
     return [..._items];
@@ -22,14 +25,32 @@ class Products with ChangeNotifier {
     return _items.firstWhere((product) => product.id == id);
   }
 
-  Future<void> fetchProducts() async {
+  Future<void> fetchProducts([bool filterByUser = false]) async {
     try {
-      final url = Uri.https(webUrl, "/products.json");
+      _items = [];
+      final query = filterByUser
+          ? {'orderBy': '"creatorId"', 'equalTo': '"$userId"', 'auth': token}
+          : {'auth': token};
+
+      var url = Uri.https(webUrl, "/products.json", query);
 
       final response = await http.get(url);
+
       if (response.statusCode == 200) {
         final Map<String, dynamic>? data = json.decode(response.body);
-        if (data == null) return;
+        if (data == null) {
+          _items = [];
+          notifyListeners();
+          return;
+        }
+
+        url = Uri.https(
+            "akzshops-default-rtdb.asia-southeast1.firebasedatabase.app",
+            '/userFavorites/$userId.json',
+            {'auth': token});
+
+        final favoriteResponse = await http.get(url);
+        final favoriteData = await json.decode(favoriteResponse.body);
 
         final List<Product> products = [];
         data.forEach(((id, product) => products.add(Product(
@@ -38,9 +59,11 @@ class Products with ChangeNotifier {
             description: product['description'],
             imageUrl: product['imageUrl'],
             price: product['price'],
-            isFavorite: product['isFavorite']))));
+            isFavorite:
+                favoriteData == null ? false : favoriteData[id] ?? false))));
 
         _items = products;
+        notifyListeners();
       }
     } catch (err) {
       return Future.error('An error occured!');
@@ -49,14 +72,14 @@ class Products with ChangeNotifier {
 
   Future<void> addProduct(Product product) async {
     try {
-      final url = Uri.https(webUrl, "/products.json");
+      final url = Uri.https(webUrl, "/products.json", {'auth': token});
 
       final body = json.encode({
         'title': product.title,
         'description': product.description,
         'price': product.price,
         'imageUrl': product.imageUrl,
-        'isFavorite': product.isFavorite
+        'creatorId': userId
       });
 
       final response = await http.post(url, body: body);
@@ -79,7 +102,7 @@ class Products with ChangeNotifier {
     try {
       final index = _items.indexWhere((item) => item.id == id);
       if (index >= 0) {
-        final url = Uri.https(webUrl, '/products/$id.json');
+        final url = Uri.https(webUrl, '/products/$id.json', {'auth': token});
 
         final body = json.encode({
           'title': product.title,
@@ -104,7 +127,7 @@ class Products with ChangeNotifier {
 
   Future<void> deleteProduct(String id) async {
     try {
-      final url = Uri.https(webUrl, '/products/$id.json');
+      final url = Uri.https(webUrl, '/products/$id.json', {'auth': token});
 
       final index = _items.indexWhere((item) => item.id == id);
       Product? product = _items[index];

@@ -20,7 +20,11 @@ class OrderItem {
 }
 
 class Orders with ChangeNotifier {
+  final String? token;
+  final String userId;
   List<OrderItem> _orders = [];
+
+  Orders(this.token, this.userId, this._orders);
 
   List<OrderItem> get orders {
     return [..._orders];
@@ -28,11 +32,15 @@ class Orders with ChangeNotifier {
 
   Future<void> fetchOrders() async {
     try {
-      final url = Uri.https(webUrl, "/orders.json");
-
+      final url = Uri.https(webUrl, "/orders/$userId.json", {'auth': token});
       final response = await http.get(url);
       final Map<String, dynamic>? data = json.decode(response.body);
-      if (data == null) return;
+
+      if (data == null) {
+        _orders = [];
+        notifyListeners();
+        return;
+      }
 
       final List<OrderItem> orders = [];
       data.forEach(((id, order) => orders.add(OrderItem(
@@ -59,7 +67,7 @@ class Orders with ChangeNotifier {
     final timestamp = DateTime.now();
 
     try {
-      final url = Uri.https(webUrl, "/orders.json");
+      final url = Uri.https(webUrl, "/orders/$userId.json", {'auth': token});
 
       final body = json.encode({
         'amount': total,
