@@ -62,7 +62,8 @@ class AuthCard extends StatefulWidget {
   _AuthCardState createState() => _AuthCardState();
 }
 
-class _AuthCardState extends State<AuthCard> {
+class _AuthCardState extends State<AuthCard>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<FormState> _formKey = GlobalKey();
   AuthMode _authMode = AuthMode.login;
   final Map<String, String> _authData = {
@@ -71,6 +72,32 @@ class _AuthCardState extends State<AuthCard> {
   };
   var _isLoading = false;
   final _passwordController = TextEditingController();
+  late AnimationController _controller;
+  late Animation<Offset> _slideTransition;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
+
+    _slideTransition = Tween<Offset>(
+            begin: const Offset(0, -1.5), end: const Offset(0, 0))
+        .animate(
+            CurvedAnimation(parent: _controller, curve: Curves.fastOutSlowIn));
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
+
+    // _heightAnimation.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
+  }
 
   void _showErrorDialog(String message) {
     showDialog(
@@ -129,13 +156,11 @@ class _AuthCardState extends State<AuthCard> {
 
   void _switchAuthMode() {
     if (_authMode == AuthMode.login) {
-      setState(() {
-        _authMode = AuthMode.signup;
-      });
+      setState(() => _authMode = AuthMode.signup);
+      _controller.forward();
     } else {
-      setState(() {
-        _authMode = AuthMode.login;
-      });
+      setState(() => _authMode = AuthMode.login);
+      _controller.reverse();
     }
   }
 
@@ -147,7 +172,9 @@ class _AuthCardState extends State<AuthCard> {
         borderRadius: BorderRadius.circular(10.0),
       ),
       elevation: 8.0,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.fastOutSlowIn,
         height: _authMode == AuthMode.signup ? 320 : 260,
         constraints:
             BoxConstraints(minHeight: _authMode == AuthMode.signup ? 320 : 260),
@@ -188,19 +215,25 @@ class _AuthCardState extends State<AuthCard> {
                   },
                 ),
                 if (_authMode == AuthMode.signup)
-                  TextFormField(
-                    enabled: _authMode == AuthMode.signup,
-                    decoration:
-                        const InputDecoration(labelText: 'Confirm Password'),
-                    obscureText: true,
-                    validator: _authMode == AuthMode.signup
-                        ? (value) {
-                            if (value != _passwordController.text) {
-                              return 'Passwords do not match!';
-                            }
-                            return null;
-                          }
-                        : null,
+                  FadeTransition(
+                    opacity: _opacityAnimation,
+                    child: SlideTransition(
+                      position: _slideTransition,
+                      child: TextFormField(
+                        enabled: _authMode == AuthMode.signup,
+                        decoration: const InputDecoration(
+                            labelText: 'Confirm Password'),
+                        obscureText: true,
+                        validator: _authMode == AuthMode.signup
+                            ? (value) {
+                                if (value != _passwordController.text) {
+                                  return 'Passwords do not match!';
+                                }
+                                return null;
+                              }
+                            : null,
+                      ),
+                    ),
                   ),
                 const SizedBox(
                   height: 20,
